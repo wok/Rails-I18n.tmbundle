@@ -23,10 +23,10 @@ class TranslationHelper
     key, translation = prompt_for_translation(self.preferences[:last_key], translation)
     if key    
       self.preferences[:last_key] = key 
-      insertion_type = prompt_for_insertion_type
-        
-      print original_text and return if insertion_type.blank?
-      replacement = build_replacement_snippet(insertion_type, key, translation)
+      # insertion_type = prompt_for_insertion_type
+      #   
+      # print original_text and return if insertion_type.blank?
+      replacement = build_replacement_snippet(key)
 
       translation = remove_surrounding_quotes(translation)
 
@@ -97,29 +97,23 @@ class TranslationHelper
   
   def translation_method
     current_file = ENV['TM_FILEPATH'].gsub(CONFIG[:project_directory], '')
-    
-    method = ""
-    method << "I18n." unless (current_file =~ /^\/app\/(controllers|helpers|views)\//)
-    method << (CONFIG[:method_style] == :short ? "t" : "translate")
-    
+
+    if ( current_file =~ /\.erb$/ )
+      method = "embed"
+    else
+      method = "plain"
+    end
     return method
   end
   
-  def build_replacement_snippet(type, key, translation)
+  def build_replacement_snippet(key)
     arguments = "'#{key}'"
-    translation.scan(/\{\{(\w+)\}\}/).flatten.each_with_index do |interpolation, count|
-      arguments << ", :#{interpolation} => $#{count + 1}"
-    end
-    
-    case type
-      when 'html'
-        replacement = "<%=#{translation_method}(#{arguments}) %>"
-      when 'string'
-        replacement = "\#{#{translation_method}(#{arguments})}"
-      when 'haml'
-        replacement = "= #{translation_method}(#{arguments})"
+  
+    case translation_method
+      when 'embed'
+        replacement = "<%= #{arguments}.t %>"
       else
-        replacement = "#{translation_method}(#{arguments})"
+        replacement = "#{arguments}.t"
     end
   end
   
